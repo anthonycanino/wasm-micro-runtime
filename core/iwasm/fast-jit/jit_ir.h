@@ -118,6 +118,11 @@ typedef enum JitRegKind {
     JIT_REG_KIND_NUM          /* number of register kinds */
 } JitRegKind;
 
+typedef enum JitSimdKind {
+    JIT_SIMD_KIND_I32X4 = 0x00,
+    JIT_SIMD_KIND_NUM
+} JitSimdKind;
+
 #if UINTPTR_MAX == UINT64_MAX
 #define JIT_REG_KIND_PTR JIT_REG_KIND_I64
 #else
@@ -330,6 +335,8 @@ typedef struct JitInsn {
         /* For lookupswitch instruction. */
         JitOpndLookupSwitch _opnd_LookupSwitch;
     } _opnd;
+
+    JitSimdKind simdKind;
 } JitInsn;
 
 /**
@@ -337,8 +344,10 @@ typedef struct JitInsn {
  */
 typedef enum JitOpcode {
 #define INSN(NAME, OPND_KIND, OPND_NUM, FIRST_USE) JIT_OP_##NAME,
+#define INSN_SIMD(NAME, OPND_KIND, OPND_NUM, FIRST_USE) JIT_OP_##NAME,
 #include "jit_ir.def"
 #undef INSN
+#undef INSN_SIMD
     JIT_OP_OPCODE_NUMBER
 } JitOpcode;
 
@@ -391,8 +400,19 @@ _jit_insn_new_LookupSwitch_1(JitOpcode opc, JitReg value, uint32 num);
         return _jit_insn_new_##OPND_KIND##_##OPND_NUM(         \
             JIT_OP_##NAME, ARG_LIST_##OPND_KIND##_##OPND_NUM); \
     }
+#define INSN_SIMD(NAME, OPND_KIND, OPND_NUM, FIRST_USE)        \
+    static inline JitInsn *jit_insn_new_##NAME(                \
+        ARG_DECL_##OPND_KIND##_##OPND_NUM, JitSimdKind simdKind) \
+    {                                                           \
+        JitInsn* insn = _jit_insn_new_##OPND_KIND##_##OPND_NUM( \
+            JIT_OP_##NAME, ARG_LIST_##OPND_KIND##_##OPND_NUM);  \
+        insn->simdKind = simdKind;                             \
+        return insn;                                             \
+    }
+
 #include "jit_ir.def"
 #undef INSN
+#undef INSN_SIMD
 #undef ARG_DECL_Reg_1
 #undef ARG_LIST_Reg_1
 #undef ARG_DECL_Reg_2
@@ -1347,6 +1367,18 @@ JitReg
 jit_cc_new_const_F64(JitCompContext *cc, double val);
 
 /**
+ * Create a V128 constant value into the compilation context.
+ *
+ * @param cc compilation context
+ * @param val a V128 value
+ *
+ * @return a constant register containing the value
+ */
+JitReg
+jit_cc_new_const_V128(JitCompContext *cc, const uint8 *val);
+
+
+/**
  * Get the relocation info of a I32 constant register.
  *
  * @param cc compilation context
@@ -1400,6 +1432,18 @@ jit_cc_get_const_F32(JitCompContext *cc, JitReg reg);
  */
 double
 jit_cc_get_const_F64(JitCompContext *cc, JitReg reg);
+
+/**
+ * Get the constant value of a V128 constant register.
+ *
+ * @param cc compilation context
+ * @param reg constant register
+ *
+ * @return the constant value
+ */
+uint8*
+jit_cc_get_const_V128(JitCompContext *cc, JitReg reg);
+
 
 /**
  * Get the number of total created labels.

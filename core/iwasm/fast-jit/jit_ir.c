@@ -17,8 +17,10 @@ enum { JIT_OPND_KIND_Reg, JIT_OPND_KIND_VReg, JIT_OPND_KIND_LookupSwitch };
  */
 static const uint8 insn_opnd_kind[] = {
 #define INSN(NAME, OPND_KIND, OPND_NUM, FIRST_USE) JIT_OPND_KIND_##OPND_KIND,
+#define INSN_SIMD(NAME, OPND_KIND, OPND_NUM, FIRST_USE) JIT_OPND_KIND_##OPND_KIND,
 #include "jit_ir.def"
 #undef INSN
+#undef INSN_SIMD
 };
 
 /**
@@ -26,8 +28,10 @@ static const uint8 insn_opnd_kind[] = {
  */
 static const uint8 insn_opnd_num[] = {
 #define INSN(NAME, OPND_KIND, OPND_NUM, FIRST_USE) OPND_NUM,
+#define INSN_SIMD(NAME, OPND_KIND, OPND_NUM, FIRST_USE) OPND_NUM,
 #include "jit_ir.def"
 #undef INSN
+#undef INSN_SIMD
 };
 
 /**
@@ -35,8 +39,10 @@ static const uint8 insn_opnd_num[] = {
  */
 static const uint8 insn_opnd_first_use[] = {
 #define INSN(NAME, OPND_KIND, OPND_NUM, FIRST_USE) FIRST_USE,
+#define INSN_SIMD(NAME, OPND_KIND, OPND_NUM, FIRST_USE) FIRST_USE,
 #include "jit_ir.def"
 #undef INSN
+#undef INSN_SIMD
 };
 
 #define JIT_INSN_NEW_Reg(OPND_NUM) \
@@ -694,6 +700,12 @@ jit_cc_new_const_F64(JitCompContext *cc, double val)
     _JIT_CC_NEW_CONST_HELPER(F64, double, val);
 }
 
+JitReg
+jit_cc_new_const_V128(JitCompContext *cc, const uint8 *val)
+{
+    return _jit_cc_new_const(cc, JIT_REG_KIND_V128, 16, val);
+}
+
 #undef _JIT_CC_NEW_CONST_HELPER
 
 #define _JIT_CC_GET_CONST_HELPER(KIND, TYPE)                               \
@@ -741,6 +753,15 @@ jit_cc_get_const_F64(JitCompContext *cc, JitReg reg)
 {
     _JIT_CC_GET_CONST_HELPER(F64, double);
 }
+
+uint8*
+jit_cc_get_const_V128(JitCompContext *cc, JitReg reg)
+{
+    bh_assert(jit_reg_kind(reg) == JIT_REG_KIND_V128);
+    bh_assert(jit_reg_is_const(reg));
+    return (uint8*) address_of_const(cc, reg, 16);
+}
+
 
 #undef _JIT_CC_GET_CONST_HELPER
 
@@ -1290,6 +1311,9 @@ jit_cc_pop_value(JitCompContext *cc, uint8 type, JitReg *p_value)
         case VALUE_TYPE_F64:
             value = pop_f64(cc->jit_frame);
             break;
+        case VALUE_TYPE_V128:
+            value = pop_v128(cc->jit_frame);
+            break;
         default:
             bh_assert(0);
             break;
@@ -1336,6 +1360,9 @@ jit_cc_push_value(JitCompContext *cc, uint8 type, JitReg value)
             break;
         case VALUE_TYPE_F64:
             push_f64(cc->jit_frame, value);
+            break;
+        case VALUE_TYPE_V128:
+            push_v128(cc->jit_frame, value);
             break;
     }
 

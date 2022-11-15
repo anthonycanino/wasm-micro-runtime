@@ -272,6 +272,18 @@ JitReg
 gen_load_f64(JitFrame *frame, unsigned n);
 
 /**
+ * Generate instruction to load a v128 value from the frame.
+ *
+ * @param frame the frame information
+ * @param n slot index to the local variable array
+ *
+ * @return register holding the loaded value
+ */
+JitReg
+gen_load_v128(JitFrame *frame, unsigned n);
+
+
+/**
  * Generate instructions to commit computation result to the frame.
  * The general principle is to only commit values that will be used
  * through the frame.
@@ -368,6 +380,23 @@ push_f64(JitFrame *frame, JitReg value)
     push_i64(frame, value);
 }
 
+static inline void
+push_v128(JitFrame *frame, JitReg value)
+{
+    frame->sp->reg = value;
+    frame->sp->dirty = 1;
+    frame->sp++;
+    frame->sp->reg = value;
+    frame->sp->dirty = 1;
+    frame->sp++;
+    frame->sp->reg = value;
+    frame->sp->dirty = 1;
+    frame->sp++;
+    frame->sp->reg = value;
+    frame->sp->dirty = 1;
+    frame->sp++;
+}
+
 static inline JitReg
 pop_i32(JitFrame *frame)
 {
@@ -394,6 +423,13 @@ pop_f64(JitFrame *frame)
 {
     frame->sp -= 2;
     return gen_load_f64(frame, frame->sp - frame->lp);
+}
+
+static inline JitReg
+pop_v128(JitFrame *frame)
+{
+    frame->sp -= 4;
+    return gen_load_v128(frame, frame->sp - frame->lp);
 }
 
 static inline void
@@ -427,6 +463,12 @@ local_f64(JitFrame *frame, int n)
     return gen_load_f64(frame, n);
 }
 
+static inline JitReg
+local_v128(JitFrame *frame, int n)
+{
+    return gen_load_v128(frame, n);
+}
+
 static void
 set_local_i32(JitFrame *frame, int n, JitReg val)
 {
@@ -455,6 +497,19 @@ set_local_f64(JitFrame *frame, int n, JitReg val)
     set_local_i64(frame, n, val);
 }
 
+static inline void
+set_local_v128(JitFrame *frame, int n, JitReg val)
+{
+    frame->lp[n].reg = val;
+    frame->lp[n].dirty = 1;
+    frame->lp[n + 1].reg = val;
+    frame->lp[n + 1].dirty = 1;
+    frame->lp[n + 2].reg = val;
+    frame->lp[n + 2].dirty = 1;
+    frame->lp[n + 3].reg = val;
+    frame->lp[n + 3].dirty = 1;
+}
+
 #define POP(jit_value, value_type)                         \
     do {                                                   \
         if (!jit_cc_pop_value(cc, value_type, &jit_value)) \
@@ -467,6 +522,8 @@ set_local_f64(JitFrame *frame, int n, JitReg val)
 #define POP_F64(v) POP(v, VALUE_TYPE_F64)
 #define POP_FUNCREF(v) POP(v, VALUE_TYPE_FUNCREF)
 #define POP_EXTERNREF(v) POP(v, VALUE_TYPE_EXTERNREF)
+
+#define POP_V128(v) POP(v, VALUE_TYPE_V128)
 
 #define PUSH(jit_value, value_type)                        \
     do {                                                   \
@@ -482,5 +539,7 @@ set_local_f64(JitFrame *frame, int n, JitReg val)
 #define PUSH_F64(v) PUSH(v, VALUE_TYPE_F64)
 #define PUSH_FUNCREF(v) PUSH(v, VALUE_TYPE_FUNCREF)
 #define PUSH_EXTERNREF(v) PUSH(v, VALUE_TYPE_EXTERNREF)
+
+#define PUSH_V128(v) PUSH(v, VALUE_TYPE_V128)
 
 #endif

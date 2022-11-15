@@ -6,6 +6,8 @@
 #include "jit_utils.h"
 #include "jit_compiler.h"
 
+#include "jit_dump.h"
+
 #if BH_DEBUG != 0
 #define VREG_DEF_SANITIZER
 #endif

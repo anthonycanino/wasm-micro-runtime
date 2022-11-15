@@ -15,7 +15,7 @@
 #endif
 
 #define CODEGEN_CHECK_ARGS 1
-#define CODEGEN_DUMP 0
+#define CODEGEN_DUMP 1
 
 using namespace asmjit;
 
@@ -6943,6 +6943,18 @@ static uint8 hreg_info_F64[3][16] = {
       1, 1, 1, 1, 1, 1, 1, 0 }, /* caller_saved_jitted */
 };
 
+/* System V AMD64 ABI Calling Conversion. [XYZ]MM0-7 */
+static uint8 hreg_info_V[3][16] = {
+    /* xmm0 ~ xmm15 */
+    { 0, 0, 0, 0, 0, 0, 0, 0,
+      1, 1, 1, 1, 1, 1, 1, 1 },
+    { 1, 1, 1, 1, 1, 1, 1, 1,
+      1, 1, 1, 1, 1, 1, 1, 0 }, /* caller_saved_native */
+    { 1, 1, 1, 1, 1, 1, 1, 1,
+      1, 1, 1, 1, 1, 1, 1, 0 }, /* caller_saved_jitted */
+};
+
+
 static const JitHardRegInfo hreg_info = {
     {
         { 0, NULL, NULL, NULL }, /* VOID */
@@ -6968,7 +6980,12 @@ static const JitHardRegInfo hreg_info = {
           hreg_info_F64[2] },
 
         { 0, NULL, NULL, NULL }, /* V8 */
-        { 0, NULL, NULL, NULL }, /* V16 */
+
+        { sizeof(hreg_info_F32[0]), /* V16 */
+          hreg_info_F32[0],
+          hreg_info_F32[1],
+          hreg_info_F32[2] },
+
         { 0, NULL, NULL, NULL }  /* V32 */
     },
     /* frame pointer hreg index: rbp */

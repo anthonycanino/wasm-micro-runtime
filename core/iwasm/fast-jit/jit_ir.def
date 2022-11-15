@@ -70,6 +70,7 @@
 
 #ifndef INSN
 #define INSN(NAME, OPND_KIND, OPND_NUM, FIRST_USE)
+#define INSN_SIMD(NAME, OPND_KIND, OPND_NUM, FIRST_USE)
 #endif
 
 /* Move and conversion instructions that transfer values among
@@ -200,7 +201,11 @@ INSN(CALLBC, Reg, 3, 2)
 INSN(RETURNBC, Reg, 3, 0)
 INSN(RETURN, Reg, 1, 0)
 
+/* SIMD instructions */
+INSN_SIMD(VECADD, Reg, 3, 1)
+
 #undef INSN
+#undef INSN_SIMD
 
 /**
  * @def ANN_LABEL (TYPE, NAME)

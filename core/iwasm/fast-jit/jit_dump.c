@@ -52,6 +52,16 @@ jit_dump_reg(JitCompContext *cc, JitReg reg)
                 os_printf("D%d", no);
             break;
 
+        case JIT_REG_KIND_V128:
+            if (jit_reg_is_const(reg))
+            {
+                uint8* vconst = jit_cc_get_const_V128(cc, reg);
+                os_printf("[%d %d %d %d]", ((int32*)vconst)[0], ((int32*)vconst)[1], ((int32*)vconst)[2], ((int32*)vconst)[3]);
+            }
+            else
+                os_printf("X%d", no);
+            break;
+
         case JIT_REG_KIND_L32:
             os_printf("L%d", no);
             break;
@@ -108,6 +118,17 @@ jit_dump_insn_LookupSwitch(JitCompContext *cc, JitInsn *insn, unsigned opnd_num)
     }
 }
 
+const char* simd_kind_as_str(JitSimdKind kind)
+{
+    switch (kind)
+    {
+        case JIT_SIMD_KIND_I32X4:
+            return "i32x4";
+        default:
+            return "unknown";
+    }
+}
+
 void
 jit_dump_insn(JitCompContext *cc, JitInsn *insn)
 {
@@ -117,8 +138,19 @@ jit_dump_insn(JitCompContext *cc, JitInsn *insn)
         os_printf("    %-15s", #NAME);                 \
         jit_dump_insn_##OPND_KIND(cc, insn, OPND_NUM); \
         break;
+#define INSN_SIMD(NAME, OPND_KIND, OPND_NUM, FIRST_USE) \
+    case JIT_OP_##NAME:                                 \
+    {                                                   \
+        char scratch[256];                              \
+        sprintf(scratch, "%s.%s", #NAME, simd_kind_as_str(insn->simdKind)); \
+        os_printf("    %-15s", scratch); \
+        jit_dump_insn_##OPND_KIND(cc, insn, OPND_NUM);  \
+        break;  \
+    }
+
 #include "jit_ir.def"
 #undef INSN
+#undef INSN_SIMD
     }
 }
 

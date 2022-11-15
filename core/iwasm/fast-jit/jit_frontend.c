@@ -16,6 +16,7 @@
 #include "fe/jit_emit_parametric.h"
 #include "fe/jit_emit_table.h"
 #include "fe/jit_emit_variable.h"
+#include "fe/jit_emit_simd.h"
 #include "../interpreter/wasm_interp.h"
 #include "../interpreter/wasm_opcode.h"
 #include "../interpreter/wasm_runtime.h"
@@ -540,6 +541,20 @@ gen_load_f64(JitFrame *frame, unsigned n)
 
     return frame->lp[n].reg;
 }
+
+JitReg
+gen_load_v128(JitFrame *frame, unsigned n)
+{
+    if (!frame->lp[n].reg) {
+        JitCompContext *cc = frame->cc;
+        frame->lp[n].reg = frame->lp[n + 1].reg = jit_cc_new_reg_V128(cc);
+        GEN_INSN(LDV128, frame->lp[n].reg, cc->fp_reg,
+                 NEW_CONST(I32, offset_of_local(n)));
+    }
+
+    return frame->lp[n].reg;
+}
+
 
 void
 gen_commit_values(JitFrame *frame, JitValueSlot *begin, JitValueSlot *end)
@@ -2223,6 +2238,36 @@ jit_compile_func(JitCompContext *cc)
                 break;
             }
 #endif /* end of WASM_ENABLE_SHARED_MEMORY */
+
+#if WASM_ENABLE_SIMD != 0
+            case WASM_OP_SIMD_PREFIX:
+            {
+                if (frame_ip < frame_ip_end) {
+                    opcode = *frame_ip++;
+                }
+
+                switch (opcode)
+                {
+                    case SIMD_v128_const:
+                        if (!jit_compile_op_v128_const(cc, frame_ip))
+                            return false;
+                        frame_ip += 16;
+                        break;
+
+                    case SIMD_i32x4_add:
+                        if (!jit_compile_op_i32x4_arith(cc, V128_ADD))
+                            return false;
+                        break;
+
+                    default:
+                        jit_set_last_error(cc, "unsupported opcode");
+                        return false;
+                }
+
+                break;
+            }
+
+#endif /* end of WASM_ENABLE_SIMD */
 
             default:
                 jit_set_last_error(cc, "unsupported opcode");

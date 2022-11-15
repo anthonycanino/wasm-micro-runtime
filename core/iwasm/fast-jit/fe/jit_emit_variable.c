@@ -57,6 +57,9 @@ jit_compile_op_get_local(JitCompContext *cc, uint32 local_idx)
         case VALUE_TYPE_F64:
             value = local_f64(cc->jit_frame, local_offset);
             break;
+        case VALUE_TYPE_V128:
+            value = local_v128(cc->jit_frame, local_offset);
+            break;
         default:
             bh_assert(0);
             break;

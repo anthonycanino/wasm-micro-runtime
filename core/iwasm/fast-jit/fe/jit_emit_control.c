@@ -374,6 +374,18 @@ copy_block_arities(JitCompContext *cc, JitReg dst_frame_sp, uint8 *dst_types,
                 offset_src += 2;
                 offset_dst += 2;
                 break;
+            case VALUE_TYPE_V128:
+                value = gen_load_v128(jit_frame, offset_src);
+                if (i == 0 && p_first_res_reg)
+                    *p_first_res_reg = value;
+                else
+                    GEN_INSN(STF64, value, dst_frame_sp,
+                             NEW_CONST(I32, offset_dst * 4));
+                offset_src += 8;
+                offset_dst += 8;
+                break;
+
+
             default:
                 bh_assert(0);
                 break;
